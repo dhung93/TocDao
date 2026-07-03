@@ -1,11 +1,19 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, BookOpen, Edit } from 'lucide-react';
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Users } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
-function Navbar() {
+function Navbar({ session }) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path) => {
     return location.pathname === path ? 'nav-link active' : 'nav-link';
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
   };
 
   return (
@@ -24,9 +32,24 @@ function Navbar() {
         <Link to="/hoatdong" className={isActive('/hoatdong')}>
           Hoạt động
         </Link>
-        <Link to="/admin" className={isActive('/admin')}>
-          Quản trị
-        </Link>
+        
+        {session ? (
+          <>
+            <Link to="/admin" className={isActive('/admin')}>
+              Quản trị
+            </Link>
+            <button 
+              onClick={handleLogout} 
+              style={{ background: 'transparent', border: '1px solid white', color: 'white', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginLeft: '10px' }}
+            >
+              Đăng xuất
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className={isActive('/login')}>
+            Đăng nhập
+          </Link>
+        )}
       </div>
     </nav>
   );

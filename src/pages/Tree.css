@@ -1,0 +1,39 @@
+.tree-node-wrapper {
+  position: relative;
+}
+
+.node-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  width: 220px;
+  background-color: rgba(255, 255, 255, 0.98);
+  color: #333;
+  text-align: left;
+  border-radius: 8px;
+  padding: 12px;
+  position: absolute;
+  z-index: 100;
+  bottom: 110%; /* Position above the node */
+  left: 50%;
+  margin-left: -110px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  border: 1px solid var(--primary-blue);
+  transition: opacity 0.3s, visibility 0.3s;
+  pointer-events: none; /* Prevent tooltip from blocking mouse events */
+}
+
+.node-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+  border-width: 8px;
+  border-style: solid;
+  border-color: var(--primary-blue) transparent transparent transparent;
+}
+
+.tree-node-wrapper:hover .node-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
