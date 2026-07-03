@@ -72,7 +72,57 @@ const renderTreeNodes = (nodes) => {
   ));
 };
 
+// Helper to find nodes by generation
+const getNodesByGen = (rootNode, genToFind) => {
+  let results = [];
+  const traverse = (node) => {
+    if (node.gen === genToFind) {
+      results.push(node);
+    }
+    if (node.children) {
+      node.children.forEach(traverse);
+    }
+  };
+  traverse(rootNode);
+  return results;
+};
+
 function FamilyTree() {
+  const [selectedGen, setSelectedGen] = React.useState('');
+  const [selectedRoot, setSelectedRoot] = React.useState(familyData);
+  const [availablePeople, setAvailablePeople] = React.useState([]);
+  const [viewMode, setViewMode] = React.useState('tree'); // 'tree' or 'list'
+
+  // Handle generation change
+  const handleGenChange = (e) => {
+    const gen = parseInt(e.target.value);
+    setSelectedGen(gen);
+    if (!isNaN(gen)) {
+      const people = getNodesByGen(familyData, gen);
+      setAvailablePeople(people);
+      setViewMode('list');
+      setSelectedRoot(null); // Clear selected root to show list
+    } else {
+      setAvailablePeople([]);
+      setViewMode('tree');
+      setSelectedRoot(familyData);
+    }
+  };
+
+  // Handle person select
+  const handlePersonSelect = (person) => {
+    setSelectedRoot(person);
+    setViewMode('tree');
+  };
+
+  // Reset tree
+  const handleReset = () => {
+    setSelectedGen('');
+    setAvailablePeople([]);
+    setSelectedRoot(familyData);
+    setViewMode('tree');
+  };
+
   return (
     <div style={{ 
       position: 'absolute', 
@@ -85,53 +135,154 @@ function FamilyTree() {
       display: 'flex',
       flexDirection: 'column'
     }}>
+      {/* Control Panel */}
       <div style={{ 
         position: 'absolute', 
-        top: '20px', 
-        left: '20px', 
+        top: '15px', 
+        left: '15px', 
         zIndex: 10,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        padding: '15px',
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        padding: '10px 15px',
         borderRadius: '8px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+        maxWidth: '280px',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-        <h2 style={{ marginBottom: '10px', fontSize: '1.5rem' }}>Sơ Đồ Gia Tộc</h2>
-        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', maxWidth: '300px' }}>
-          Dùng chuột (hoặc ngón tay) để kéo/thả và cuộn chuột để phóng to/thu nhỏ sơ đồ. Nhánh Đời 11-15 nằm bên tay trái.
+        <h2 style={{ marginBottom: '8px', fontSize: '1.2rem', color: 'var(--dark-blue)' }}>Sơ Đồ Gia Tộc</h2>
+        
+        <div style={{ marginBottom: '5px' }}>
+          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Bộ lọc (Filter):</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <select 
+              value={selectedGen} 
+              onChange={handleGenChange}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #ccc',
+                flex: 1,
+                fontSize: '0.85rem'
+              }}
+            >
+              <option value="">-- Toàn bộ gia tộc --</option>
+              {[...Array(11)].map((_, i) => (
+                <option key={i+5} value={i+5}>Đời {i+5}</option>
+              ))}
+            </select>
+            <button 
+              onClick={handleReset}
+              style={{
+                padding: '8px 15px',
+                backgroundColor: 'var(--secondary-blue)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        {viewMode === 'tree' && selectedRoot && selectedRoot.id !== familyData.id && (
+          <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#eef6ff', borderRadius: '6px', border: '1px solid #cce0ff' }}>
+            <div style={{ fontSize: '0.85rem', color: '#555', marginBottom: '5px' }}>Đang hiển thị sơ đồ nhánh của:</div>
+            <div style={{ fontWeight: 'bold', color: 'var(--primary-blue)' }}>{selectedRoot.name} (Đời {selectedRoot.gen})</div>
+            <button 
+              onClick={() => { setViewMode('list'); setSelectedRoot(null); }}
+              style={{ marginTop: '8px', padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer', borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}
+            >
+              &larr; Quay lại danh sách Đời {selectedGen}
+            </button>
+          </div>
+        )}
+
+        <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '15px', marginBottom: 0, fontStyle: 'italic' }}>
+          Mẹo: Kéo/thả và cuộn chuột để phóng to/thu nhỏ sơ đồ.
         </p>
       </div>
 
-      <div style={{ flex: 1, width: '100%', height: '100%', cursor: 'grab' }}>
-        <TransformWrapper
-          initialScale={1}
-          minScale={0.1}
-          maxScale={3}
-          centerOnInit={true}
-          wheel={{ step: 0.1 }}
-        >
-          {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
-            <>
-              <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
-                <button className="btn" onClick={() => zoomIn()}>+</button>
-                <button className="btn" onClick={() => zoomOut()}>-</button>
-                <button className="btn btn-secondary" onClick={() => resetTransform()}>Reset</button>
-              </div>
-              
-              <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
-                <div style={{ padding: '100px' }}>
-                  <Tree
-                    lineWidth={'2px'}
-                    lineColor={'var(--primary-blue)'}
-                    lineBorderRadius={'10px'}
-                    label={<StyledNode node={familyData} />}
-                  >
-                    {familyData.children && renderTreeNodes(familyData.children)}
-                  </Tree>
+      {/* Main Content Area */}
+      <div style={{ flex: 1, width: '100%', height: '100%', cursor: viewMode === 'tree' ? 'grab' : 'default' }}>
+        
+        {viewMode === 'list' && (
+          <div style={{ padding: '100px 50px 50px', height: '100%', overflowY: 'auto' }}>
+            <h3 style={{ textAlign: 'center', color: 'var(--dark-blue)', marginBottom: '30px', fontSize: '1.8rem' }}>
+              Danh sách thành viên Đời thứ {selectedGen} ({availablePeople.length} người)
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+              {availablePeople.map(p => (
+                <div 
+                  key={p.id}
+                  onClick={() => handlePersonSelect(p)}
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '10px',
+                    padding: '20px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                    border: '1px solid #eee',
+                    borderTop: '4px solid var(--primary-blue)',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, boxShadow 0.2s',
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'; }}
+                >
+                  <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>Đời {p.gen}</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--dark-blue)', marginBottom: '10px' }}>{p.name}</div>
+                  {p.spouse && (
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span style={{ color: 'var(--accent-green)' }}>♥</span> {p.spouse}
+                    </div>
+                  )}
+                  {p.parent && (
+                    <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #ddd' }}>
+                      Con của: <span style={{ fontWeight: '500' }}>{p.parent}</span>
+                    </div>
+                  )}
+                  <div style={{ marginTop: '15px', color: 'var(--primary-blue)', fontSize: '0.85rem', fontWeight: '500', textAlign: 'center' }}>
+                    Xem sơ đồ nhánh &rarr;
+                  </div>
                 </div>
-              </TransformComponent>
-            </>
-          )}
-        </TransformWrapper>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'tree' && selectedRoot && (
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.1}
+            maxScale={3}
+            centerOnInit={true}
+            wheel={{ step: 0.1 }}
+          >
+            {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
+              <>
+                <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px' }}>
+                  <button className="btn" onClick={() => zoomIn()}>+</button>
+                  <button className="btn" onClick={() => zoomOut()}>-</button>
+                  <button className="btn btn-secondary" onClick={() => resetTransform()}>Reset Zoom</button>
+                </div>
+                
+                <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+                  <div style={{ padding: '100px' }}>
+                    <Tree
+                      lineWidth={'2px'}
+                      lineColor={'var(--primary-blue)'}
+                      lineBorderRadius={'10px'}
+                      label={<StyledNode node={selectedRoot} />}
+                    >
+                      {selectedRoot.children && renderTreeNodes(selectedRoot.children)}
+                    </Tree>
+                  </div>
+                </TransformComponent>
+              </>
+            )}
+          </TransformWrapper>
+        )}
       </div>
     </div>
   );
