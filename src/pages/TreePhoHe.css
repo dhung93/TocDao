@@ -1,0 +1,186 @@
+.phohe-wrapper {
+  position: absolute;
+  top: 72px; /* Navbar height */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #f4f4f4; /* Muted background */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Times New Roman', serif; /* Classic look */
+}
+
+.phohe-title-banner {
+  text-align: center;
+  padding: 10px 0;
+  background: white;
+  border-bottom: 2px solid #ccc;
+  z-index: 10;
+}
+
+.phohe-title-banner h2 {
+  margin: 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.phohe-controls {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  gap: 10px;
+}
+
+.phohe-controls button {
+  padding: 5px 15px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+}
+
+.phohe-controls button:hover {
+  background: #eee;
+}
+
+.phohe-transform-wrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.phohe-transform-content {
+  padding: 40px;
+  min-width: fit-content;
+}
+
+/* Node Styling */
+.phohe-node-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 3px;
+  position: relative;
+}
+
+.phohe-node-box {
+  border: 1px solid #333;
+  background-color: white;
+  padding: 3px 5px;
+  min-width: 40px;
+  text-align: center;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  height: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.phohe-name {
+  font-weight: bold;
+  font-size: 13px;
+  color: #000;
+  white-space: nowrap;
+}
+
+.phohe-spouse {
+  font-size: 11px;
+  font-style: italic;
+  color: #555;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Toggle Button */
+.phohe-toggle-btn {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  background: white;
+  border: 1px solid #333;
+  border-radius: 2px;
+  font-size: 14px;
+  line-height: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.phohe-toggle-btn:hover {
+  background: #eee;
+}
+
+/* Tooltip (Hover) */
+.phohe-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  color: #333;
+  text-align: center;
+  padding: 12px;
+  border-radius: 8px;
+  z-index: 1000;
+  width: max-content;
+  max-width: 250px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  border: 1px solid var(--primary-blue);
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
+}
+
+.phohe-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--primary-blue) transparent transparent transparent;
+}
+
+.phohe-node-container:hover .phohe-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Generation Column */
+.phohe-gen-column {
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid #ccc;
+  padding-right: 20px;
+  margin-right: 20px;
+  margin-top: 50px; /* Align with first node roughly */
+}
+
+.phohe-gen-label {
+  font-weight: bold;
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+  /* To align with the rows, we need to match the height of each generation tier. 
+     react-organizational-chart uses padding between nodes. 
+     This is hard to align perfectly without custom logic, but we'll try fixed spacing. */
+  height: 100px; /* Adjust based on node height + tree lines */
+  display: flex;
+  align-items: center;
+  border-bottom: 1px dashed #ddd;
+}

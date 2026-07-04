@@ -3,40 +3,61 @@ import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
 function Login() {
+  const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState(null);
   
-  // States cho trường hợp phải đổi mật khẩu lần đầu
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setMessage(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isLoginMode) {
+        // LOGIN
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Nếu mật khẩu đăng nhập là 123456 (mặc định), yêu cầu đổi ngay
-      if (password === '123456') {
-        setNeedsPasswordChange(true);
-        setLoading(false);
-        return;
+        if (password === '123456') {
+          setNeedsPasswordChange(true);
+          setLoading(false);
+          return;
+        }
+
+        navigate('/admin');
+      } else {
+        // REGISTER
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        
+        if (error) throw error;
+        
+        setMessage('Đăng ký thành công! Vui lòng đăng nhập.');
+        setIsLoginMode(true);
+        setPassword('');
       }
-
-      navigate('/admin');
     } catch (err) {
-      setError(err.message || 'Đăng nhập thất bại. Kiểm tra lại thông tin.');
+      if (err.message.includes('Email not confirmed')) {
+        setError('Tài khoản chưa được xác nhận. Vui lòng liên hệ Admin hoặc check email.');
+      } else {
+        setError(err.message || 'Thao tác thất bại. Kiểm tra lại thông tin.');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -65,27 +86,48 @@ function Login() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', backgroundColor: 'var(--bg-color)' }}>
       <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' }}>
-        <h2 style={{ textAlign: 'center', color: 'var(--primary-blue)', marginBottom: '30px' }}>
-          Đăng Nhập Quản Trị
+        <h2 style={{ textAlign: 'center', color: 'var(--primary-blue)', marginBottom: '10px' }}>
+          {isLoginMode ? 'Đăng Nhập Hệ Thống' : 'Tạo Tài Khoản Mới'}
         </h2>
+        {!needsPasswordChange && (
+          <p style={{ textAlign: 'center', color: '#666', marginBottom: '30px', fontSize: '0.9rem' }}>
+            {isLoginMode ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'} 
+            <button 
+              onClick={() => {
+                setIsLoginMode(!isLoginMode);
+                setError(null);
+                setMessage(null);
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--primary-blue)', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px' }}
+            >
+              {isLoginMode ? 'Đăng ký ngay' : 'Đăng nhập'}
+            </button>
+          </p>
+        )}
         
         {error && (
           <div style={{ padding: '10px', backgroundColor: '#fee', color: 'red', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem' }}>
             {error}
           </div>
         )}
+        
+        {message && (
+          <div style={{ padding: '10px', backgroundColor: '#d4edda', color: '#155724', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9rem' }}>
+            {message}
+          </div>
+        )}
 
         {!needsPasswordChange ? (
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label className="form-label">Email (hoặc SĐT@tocdao.com)</label>
+              <label className="form-label">Email</label>
               <input 
                 type="email" 
                 className="form-control" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="VD: admin@tocdao.com"
+                placeholder="VD: nguyenvan_a@gmail.com"
               />
             </div>
             
@@ -97,6 +139,7 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
 
@@ -106,7 +149,7 @@ function Login() {
               style={{ width: '100%', padding: '12px', fontSize: '1.1rem' }}
               disabled={loading}
             >
-              {loading ? 'Đang xử lý...' : 'Đăng Nhập'}
+              {loading ? 'Đang xử lý...' : (isLoginMode ? 'Đăng Nhập' : 'Đăng Ký')}
             </button>
           </form>
         ) : (

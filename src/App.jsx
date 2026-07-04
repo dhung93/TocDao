@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Tree from './pages/Tree';
+import TreePhoHe from './pages/TreePhoHe';
 import Activities from './pages/Activities';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
@@ -33,6 +34,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/sodo" element={<Tree />} />
+          <Route path="/sodophohe" element={<TreePhoHe />} />
           <Route path="/hoatdong" element={<Activities />} />
           <Route path="/login" element={session ? <Navigate to="/admin" /> : <Login />} />
           <Route path="/admin/*" element={session ? <Admin session={session} /> : <Navigate to="/login" />} />
