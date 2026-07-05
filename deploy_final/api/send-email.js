@@ -1,9 +1,9 @@
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
 
-// Thay thế process.env bằng giá trị trực tiếp để tránh lỗi trên Vercel nếu người dùng chưa cấu hình Biến môi trường
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://snpsbbhfngovwkwftluy.supabase.co';
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_6IJvMWBOgWN5WKC6LD9ebA_rPM4F24F';
+// Vercel sets these automatically if configured, or we can use the ones from process.env
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

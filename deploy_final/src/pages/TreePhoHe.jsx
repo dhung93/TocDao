@@ -82,12 +82,7 @@ function TreePhoHe() {
   const syncColumn = (ref) => {
     if (colRef.current && ref && ref.state) {
       const { positionY, scale } = ref.state;
-      requestAnimationFrame(() => {
-        if (colRef.current) {
-          colRef.current.style.transform = `translate3d(0, ${positionY}px, 0) scale(${scale})`;
-          colRef.current.style.willChange = 'transform';
-        }
-      });
+      colRef.current.style.transform = `translateY(${positionY}px) scale(${scale})`;
     }
   };
 
