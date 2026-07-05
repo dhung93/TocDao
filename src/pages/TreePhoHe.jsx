@@ -97,7 +97,6 @@ function TreePhoHe() {
     });
 
     let root = null;
-    const initialCollapsed = new Set();
 
     data.forEach(item => {
       if (item.parent_id) {
@@ -107,14 +106,10 @@ function TreePhoHe() {
       } else {
         root = nodeMap[item.id];
       }
-      
-      // Mặc định: Gấp gọn các nhánh từ Đời 6 trở đi để cây nhỏ gọn ban đầu
-      if (item.gen >= 6) {
-        initialCollapsed.add(item.id);
-      }
     });
 
-    setCollapsedNodes(initialCollapsed);
+    // Mặc định: Mở rộng tất cả các nhánh
+    setCollapsedNodes(new Set());
     setTreeData(root);
     setLoading(false);
   };
@@ -126,6 +121,25 @@ function TreePhoHe() {
       else next.add(nodeId);
       return next;
     });
+  };
+
+  const expandAll = () => {
+    setCollapsedNodes(new Set());
+  };
+
+  const collapseAll = () => {
+    if (!treeData) return;
+    const allIds = new Set();
+    const traverse = (node) => {
+      if (node.children && node.children.length > 0) {
+        allIds.add(node.id);
+        node.children.forEach(traverse);
+      }
+    };
+    traverse(treeData);
+    // Không gấp gốc, giữ lại đời 1 hiển thị
+    allIds.delete(treeData.id);
+    setCollapsedNodes(allIds);
   };
 
   if (loading) {
@@ -160,6 +174,8 @@ function TreePhoHe() {
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
             <div className="phohe-controls">
+              <button onClick={expandAll}>Mở rộng tất cả</button>
+              <button onClick={collapseAll}>Thu gọn tất cả</button>
               <button onClick={() => zoomIn()}>Phóng to (+)</button>
               <button onClick={() => zoomOut()}>Thu nhỏ (-)</button>
               <button onClick={() => resetTransform()}>Mặc định</button>
