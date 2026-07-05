@@ -27,13 +27,16 @@ function Navbar({ session }) {
           HOME
         </Link>
         <Link to="/sodo" className={isActive('/sodo')}>
-          Gia Phả
+          Phổ hệ
         </Link>
         <Link to="/sodophohe" className={isActive('/sodophohe')}>
           Phổ Hệ Truyền Thống
         </Link>
         <Link to="/hoatdong" className={isActive('/hoatdong')}>
           Hoạt động
+        </Link>
+        <Link to="/thongbao" className={isActive('/thongbao')}>
+          Thông báo
         </Link>
         
         {session ? (

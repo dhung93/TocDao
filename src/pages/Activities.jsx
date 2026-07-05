@@ -2,20 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
 
-function Activities() {
+function Activities({ session, type = "Hoạt động" }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [canWrite, setCanWrite] = useState(false);
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+    if (session?.user) {
+      checkRole();
+    }
+  }, [session, type]);
+
+  async function checkRole() {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('is_admin, menu_post')
+      .eq('user_id', session.user.id)
+      .single();
+    
+    if (data && (data.is_admin || data.menu_post)) {
+      setCanWrite(true);
+    }
+  }
 
   async function fetchPosts() {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('posts')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (type === "Thông báo") {
+        query = query.eq('category', 'Thông báo');
+      } else {
+        query = query.neq('category', 'Thông báo');
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;
@@ -32,8 +57,8 @@ function Activities() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2>Hoạt Động & Phong Trào</h2>
-        <Link to="/admin" className="btn">Viết bài mới</Link>
+        <h2>{type === "Thông báo" ? "Bảng Thông Báo" : "Hoạt Động & Phong Trào"}</h2>
+        {canWrite && <Link to="/admin" className="btn">Viết {type === "Thông báo" ? "thông báo" : "bài"} mới</Link>}
       </div>
 
       {loading ? (
@@ -47,7 +72,7 @@ function Activities() {
                 <span className="card-date">{new Date(post.created_at).toLocaleDateString('vi-VN')} - {post.category}</span>
                 <h3 className="card-title">{post.title}</h3>
                 <div className="card-desc" dangerouslySetInnerHTML={{ __html: post.content.substring(0, 150) + '...' }}></div>
-                <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>Đọc thêm</button>
+                <Link to={`/post/${post.id}`} className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem', display: 'inline-block', textDecoration: 'none' }}>Đọc thêm</Link>
               </div>
             </div>
           ))}

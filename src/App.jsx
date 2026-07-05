@@ -7,6 +7,7 @@ import TreePhoHe from './pages/TreePhoHe';
 import Activities from './pages/Activities';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import PostDetail from './pages/PostDetail';
 import { supabase } from './supabaseClient';
 import './index.css';
 
@@ -35,7 +36,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/sodo" element={<Tree />} />
           <Route path="/sodophohe" element={<TreePhoHe />} />
-          <Route path="/hoatdong" element={<Activities />} />
+          <Route path="/hoatdong" element={<Activities session={session} type="Hoạt động" />} />
+          <Route path="/thongbao" element={<Activities session={session} type="Thông báo" />} />
+          <Route path="/post/:id" element={<PostDetail />} />
           <Route path="/login" element={session ? <Navigate to="/admin" /> : <Login />} />
           <Route path="/admin/*" element={session ? <Admin session={session} /> : <Navigate to="/login" />} />
         </Routes>

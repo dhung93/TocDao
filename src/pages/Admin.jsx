@@ -4,6 +4,54 @@ import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { supabase } from '../supabaseClient';
 import MemberManager from './admin/MemberManager';
 
+class SupabaseUploadAdapter {
+  constructor(loader) {
+    this.loader = loader;
+  }
+
+  upload() {
+    return this.loader.file
+      .then(file => new Promise(async (resolve, reject) => {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+          const filePath = `posts/${fileName}`;
+
+          const { data, error } = await supabase.storage
+            .from('images')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (error) {
+            alert('Lỗi tải ảnh lên Supabase: ' + error.message);
+            return reject(error.message);
+          }
+          
+          const { data: publicUrlData } = supabase.storage
+            .from('images')
+            .getPublicUrl(filePath);
+
+          resolve({
+            default: publicUrlData.publicUrl
+          });
+        } catch (err) {
+          alert('Lỗi không xác định: ' + err.message);
+          reject(err.message);
+        }
+      }));
+  }
+
+  abort() {}
+}
+
+function CustomUploadAdapterPlugin(editor) {
+  editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
+    return new SupabaseUploadAdapter(loader);
+  };
+}
+
 function Admin({ session }) {
   const [activeTab, setActiveTab] = useState('account');
   const [userRoles, setUserRoles] = useState(null);
@@ -107,12 +155,30 @@ function Admin({ session }) {
             Phân quyền User
           </button>
         )}
+
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('settings')}
+            style={{
+              padding: '10px 20px',
+              background: activeTab === 'settings' ? 'var(--dark-blue)' : 'transparent',
+              color: activeTab === 'settings' ? 'white' : '#555',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Cấu hình Hệ thống
+          </button>
+        )}
       </div>
 
       {activeTab === 'posts' && <PostManager session={session} />}
       {activeTab === 'members' && <MemberManager session={session} userRoles={userRoles} />}
       {activeTab === 'account' && <AccountManager session={session} userRoles={userRoles} />}
       {activeTab === 'users' && isAdmin && <UserManager session={session} />}
+      {activeTab === 'settings' && isAdmin && <SettingsManager session={session} />}
 
     </div>
   );
@@ -122,6 +188,7 @@ function PostManager({ session }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Tin tức');
   const [content, setContent] = useState('');
+  const [sendEmail, setSendEmail] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -135,11 +202,29 @@ function PostManager({ session }) {
       const { error } = await supabase
         .from('posts')
         .insert([
-          { title, category, content, author_id: session?.user?.id }
+          { title, category, content }
         ]);
 
       if (error) throw error;
       
+      // Nếu có chọn gửi email
+      if (sendEmail) {
+        try {
+          const emailRes = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content, category })
+          });
+          const emailData = await emailRes.json();
+          if (!emailRes.ok) {
+            throw new Error(emailData.message || 'Lỗi gửi email');
+          }
+        } catch (emailErr) {
+          console.error('Email error:', emailErr);
+          alert('Đăng bài thành công nhưng gửi email thất bại: ' + emailErr.message);
+        }
+      }
+
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -190,11 +275,25 @@ function PostManager({ session }) {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
+            <option value="Thông báo">Thông báo</option>
             <option value="Tin tức">Tin tức</option>
             <option value="Sự kiện">Sự kiện</option>
             <option value="Phong trào">Phong trào</option>
             <option value="Khuyến học">Khuyến học</option>
           </select>
+        </div>
+
+        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '1rem', marginBottom: '1.5rem', background: '#f5f5f5', padding: '10px', borderRadius: '8px' }}>
+          <input 
+            type="checkbox" 
+            id="sendEmail" 
+            checked={sendEmail} 
+            onChange={(e) => setSendEmail(e.target.checked)} 
+            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+          />
+          <label htmlFor="sendEmail" style={{ cursor: 'pointer', fontWeight: 'bold', color: 'var(--country-earth)', margin: 0 }}>
+            Gửi email thông báo ngay cho toàn bộ thành viên gia tộc
+          </label>
         </div>
 
         <div className="form-group">
@@ -207,7 +306,10 @@ function PostManager({ session }) {
                 const data = editor.getData();
                 setContent(data);
               }}
-              config={{ placeholder: 'Nhập nội dung bài viết vào đây...' }}
+              config={{ 
+                placeholder: 'Nhập nội dung bài viết vào đây...',
+                extraPlugins: [CustomUploadAdapterPlugin]
+              }}
             />
           </div>
         </div>
@@ -415,6 +517,83 @@ function UserManager() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function SettingsManager() {
+  const [email, setEmail] = useState('');
+  const [appPassword, setAppPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    const { data } = await supabase.from('site_settings').select('*').single();
+    if (data) {
+      setEmail(data.gmail_address || '');
+      setAppPassword(data.gmail_app_password || '');
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase
+        .from('site_settings')
+        .upsert({ id: 1, gmail_address: email, gmail_app_password: appPassword });
+      
+      if (error) throw error;
+      setMessage('Lưu cấu hình thành công!');
+    } catch (err) {
+      alert('Lỗi lưu cấu hình: ' + err.message + '\n\n(Lưu ý: Bạn cần tạo bảng site_settings trong Supabase trước!)');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ background: '#f9f9f9', padding: '20px', borderRadius: '8px', border: '1px solid #eee' }}>
+      <h3 style={{ color: 'var(--primary-blue)', marginBottom: '15px' }}>Cấu hình Email (SMTP Gmail)</h3>
+      <p style={{ marginBottom: '15px', color: '#555', fontSize: '0.9rem' }}>
+        Nhập địa chỉ Gmail và <strong>Mật khẩu Ứng dụng (App Password)</strong> để hệ thống có thể tự động gửi email thông báo.
+      </p>
+      
+      {message && <div style={{ padding: '10px', background: '#d4edda', color: '#155724', borderRadius: '5px', marginBottom: '15px' }}>{message}</div>}
+
+      <form onSubmit={handleSave} style={{ maxWidth: '400px' }}>
+        <div className="form-group">
+          <label className="form-label">Địa chỉ Gmail</label>
+          <input 
+            type="email" 
+            className="form-control" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="ví dụ: giatoc@gmail.com"
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Mật khẩu Ứng dụng (App Password)</label>
+          <input 
+            type="password" 
+            className="form-control" 
+            value={appPassword}
+            onChange={(e) => setAppPassword(e.target.value)}
+            placeholder="16 ký tự viết liền không dấu cách"
+            required
+          />
+        </div>
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? 'Đang lưu...' : 'Lưu Cấu Hình'}
+        </button>
+      </form>
     </div>
   );
 }

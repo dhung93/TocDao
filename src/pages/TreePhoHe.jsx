@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from '../supabaseClient';
@@ -77,6 +77,14 @@ function TreePhoHe() {
   const [treeData, setTreeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [collapsedNodes, setCollapsedNodes] = useState(new Set());
+  const colRef = useRef(null);
+
+  const syncColumn = (ref) => {
+    if (colRef.current && ref && ref.state) {
+      const { positionY, scale } = ref.state;
+      colRef.current.style.transform = `translateY(${positionY}px) scale(${scale})`;
+    }
+  };
 
   useEffect(() => {
     fetchMembers();
@@ -164,41 +172,64 @@ function TreePhoHe() {
         <h2>SƠ ĐỒ PHỔ HỆ TỘC ĐÀO</h2>
       </div>
 
-      <TransformWrapper
-        initialScale={0.8}
-        minScale={0.1}
-        maxScale={2}
-        centerOnInit={true}
-        wheel={{ step: 0.1 }}
-      >
-        {({ zoomIn, zoomOut, resetTransform }) => (
-          <>
-            <div className="phohe-controls">
-              <button onClick={expandAll}>Mở rộng tất cả</button>
-              <button onClick={collapseAll}>Thu gọn tất cả</button>
-              <button onClick={() => zoomIn()}>Phóng to (+)</button>
-              <button onClick={() => zoomOut()}>Thu nhỏ (-)</button>
-              <button onClick={() => resetTransform()}>Mặc định</button>
-            </div>
+      <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+        {/* Sticky Generation Column - Fixed on left, syncs Y and Scale via ref */}
+        <div 
+          style={{ 
+            position: 'absolute', 
+            left: 0, 
+            top: 0, 
+            zIndex: 10, 
+            paddingTop: '60px', /* Khớp với padding của phohe-transform-content */
+            pointerEvents: 'none'
+          }}
+        >
+          <div 
+            ref={colRef}
+            className="phohe-gen-column"
+            style={{ 
+              transformOrigin: '0 0', 
+              pointerEvents: 'auto',
+              margin: 0, /* Ghi đè margin-top trong CSS */
+              paddingLeft: '20px'
+            }}
+          >
+            {generations.map(gen => (
+              <div key={gen} className="phohe-gen-label">ĐỜI {gen}</div>
+            ))}
+          </div>
+        </div>
 
-            <TransformComponent wrapperClass="phohe-transform-wrapper" contentClass="phohe-transform-content">
-              
-              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                {/* Generation Labels Column */}
-                <div className="phohe-gen-column">
-                  {generations.map(gen => (
-                    <div key={gen} className="phohe-gen-label">ĐỜI {gen}</div>
-                  ))}
-                </div>
+        <TransformWrapper
+          initialScale={0.8}
+          minScale={0.1}
+          maxScale={2}
+          centerOnInit={true}
+          wheel={{ step: 0.1 }}
+          onInit={syncColumn}
+          onTransformed={syncColumn}
+          onPanning={syncColumn}
+          onZooming={syncColumn}
+        >
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <>
+              <div className="phohe-controls">
+                <button onClick={expandAll}>Mở rộng tất cả</button>
+                <button onClick={collapseAll}>Thu gọn tất cả</button>
+                <button onClick={() => zoomIn()}>Phóng to (+)</button>
+                <button onClick={() => zoomOut()}>Thu nhỏ (-)</button>
+                <button onClick={() => resetTransform()}>Mặc định</button>
+              </div>
 
+              <TransformComponent wrapperClass="phohe-transform-wrapper" contentClass="phohe-transform-content">
                 {/* The Tree */}
-                <div className="phohe-tree-container">
+                <div className="phohe-tree-container" style={{ paddingLeft: '120px' /* Chừa không gian cho cột Đời bên trái */ }}>
                   <Tree
-                    lineWidth={'1px'}
-                    lineColor={'#333'}
-                    lineBorderRadius={'0px'} // Square lines
-                    lineHeight={'60px'}
-                    nodePadding={'0px'}
+                    lineWidth={'2px'}
+                    lineColor={'#8d6e63'} /* country-earth-light */
+                    lineBorderRadius={'20px'} /* Tăng độ cong để các đường kẻ giống đường chéo/lượn sóng mềm mại hơn */
+                    lineHeight={'40px'} /* Giảm chiều cao đường nối để kéo gần các đời lại */
+                    nodePadding={'2px'} /* Giảm khoảng cách ngang tối đa */
                     label={
                       <StyledNode 
                         node={treeData} 
@@ -211,12 +242,11 @@ function TreePhoHe() {
                     {treeData && treeData.children && !collapsedNodes.has(treeData.id) && renderTreeNodes(treeData.children, collapsedNodes, toggleNode)}
                   </Tree>
                 </div>
-              </div>
-
-            </TransformComponent>
-          </>
-        )}
-      </TransformWrapper>
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
+      </div>
     </div>
   );
 }
