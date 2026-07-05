@@ -210,6 +210,7 @@ function TreePhoHe() {
           minScale={0.1}
           maxScale={2}
           centerOnInit={true}
+          limitToBounds={false}
           wheel={{ step: 0.1 }}
           onInit={syncColumn}
           onTransformed={syncColumn}

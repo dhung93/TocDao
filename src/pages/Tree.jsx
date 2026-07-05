@@ -298,6 +298,7 @@ function FamilyTree() {
             minScale={0.1}
             maxScale={3}
             centerOnInit={true}
+            limitToBounds={false}
             wheel={{ step: 0.1 }}
           >
             {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
